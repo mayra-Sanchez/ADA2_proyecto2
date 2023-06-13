@@ -2,9 +2,11 @@ import tkinter as tk
 from tkinter import Tk, Label, Button
 from tkinter import ttk
 from PIL import ImageTk, Image
-import minizinc 
+import minizinc
+from minizinc import Instance, Solver, Model
 from tkinter import filedialog
-
+import os
+import subprocess
 
 class aplicacion(tk.Tk):
     def __init__(self):
@@ -95,9 +97,25 @@ class aplicacion(tk.Tk):
         self.crearDzn.pack()
         self.crearDzn.config(bg="white",width=20, height=2)
         self.crearDzn.place(x=450, y=685) 
-        # Ejecute el modelo genérico CalDep.mzn sobre los datos proporcionados
-        # Despliegue los resultados de la solución
 
+        # Ejecute el modelo genérico CalDep.mzn sobre los datos proporcionados
+        self.correrMzn = Button(
+            self, text="Correr modelo genérico", command=self.correr)
+        self.correrMzn.pack()
+        self.correrMzn.config(bg="white",width=20, height=2)
+        self.correrMzn.place(x=620, y=685) 
+
+        # Despliegue los resultados de la solución
+        self.resultado_label = ttk.Label(self, text="Resultado:")
+        self.resultado_label.pack()
+        self.resultado_label.config(font=('Times New Roman', 15), background="white")
+        self.resultado_label.place(x=850, y=180)
+
+        
+        self.salida_resultado= tk.Text(self, width=20, height=15)
+        self.salida_resultado.configure(font=("sans-serif", 12), borderwidth=0, relief=tk.RAISED, highlightthickness=1)
+        self.salida_resultado.pack()
+        self.salida_resultado.place(x=950, y=180)
     # Función que sirve para leer el archivo txt y ponerlo en la interfaz
     def cargarDatosInterfaz(self):
         file = tk.filedialog.askopenfile(filetypes=[("Text Files", "*.txt")])
@@ -109,7 +127,6 @@ class aplicacion(tk.Tk):
             self.max_entry.insert(tk.END, data[2])
             self.matrix_entry.insert(tk.END, "\n".join(data[3:]))
             file.close()
-
     
     def crearArchivoDzn(self):
         # Get the data from the entry fields
@@ -124,25 +141,45 @@ class aplicacion(tk.Tk):
         matrix_data = matrix_data[:-2]  # Remove the trailing comma and newline character
 
         # Write the data to a file
-        with open("DatosCalDep.dzn", "w") as file:
+        with open("DatosCalendarioDeportivo.dzn", "w") as file:
             file.write(f"n = {n_value};\n")
             file.write(f"Min = {min_value};\n")
             file.write(f"Max = {max_value};\n")
-            file.write(f"Distancia = [|{matrix_data}\n0|];\n")
+            file.write(f"Distancia = [|{matrix_data}0|];")
+    
+    def correr(self):
+        # Ruta al archivo del modelo
+        model_file = "CalendarioDeportivo.mzn"
 
-        # Run the MiniZinc model
-        model = minizinc.Model()
-        model.add_file("CalDep.mzn")
-        instance = minizinc.minizinc(model)
-        instance["data"] = "DatosCalDep.dzn"
-        result = instance.solve("gecode")
+        # Ruta al archivo de datos
+        data_file = "DatosCalendarioDeportivo.dzn"
 
-        # Display the results
-        result_text = "Results:\n"
-        for item in result:
-            result_text += str(item) + "\n"
-        print(result_text)
+        # Comando para ejecutar MiniZinc desde la línea de comandos
+        command = ['C:/Program Files/MiniZinc', '--solver', 'gecode', model_file, data_file]
+        result = subprocess.run(command, capture_output=True, text=True)
+        print(result)
+        # try:
+        #     # Ejecutar el comando y capturar la salida
+        #     
 
+        #     # Obtener la salida estándar y la salida de error
+        #     output_text = result.stdout
+        #     error_text = result.stderr
+
+        #     if result.returncode == 0:
+        #         # Obtener los resultados del texto de salida
+        #         result_text = "No se encontró una solución satisfactoria."
+        #         if "----------" in output_text:
+        #             result_text = output_text.split("----------")[-1].strip()
+
+        #         # Actualizar el texto del resultado_label
+        #         self.resultado_label.config(text=result_text)
+        #     else:
+        #         # Actualizar el texto del resultado_label con el mensaje de error
+        #         self.resultado_label.config(text="Error al ejecutar MiniZinc: " + error_text)
+        # except subprocess.CalledProcessError as e:
+        #     # Si hay un error al ejecutar el comando
+        #     self.resultado_label.config(text="Error al ejecutar MiniZinc: " + str(e))
 
 
 if __name__ == "__main__":
