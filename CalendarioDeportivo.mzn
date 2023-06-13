@@ -55,21 +55,20 @@ constraint forall(i,k in 1..2*(n-1), j in 1..n where i != k)(
   Cal[i,j] != Cal[k,j]
 );
 
-%No se puede superar el máximo de giras consecutivas
+% Máximo de giras consecutivas
 constraint forall(i in 1..2*(n-1))(
            forall(j in 1..n)(
               if Cal[i,j] < 0 then
                 if i==1 then
-                Gira[i,j] = 1
-              else Gira[i,j] = Gira[i-1,j] + 1
-              endif
+                   Gira[i,j] = 1
+                else Gira[i,j] = Gira[i-1,j] + 1
+                endif
               else Gira[i,j] = 0
-                
               endif
            )  
 );
 
-%No se puede superar el máximo de permanencias consecutivas
+% Máximo de permanencias consecutivas
 constraint forall(i in 1..2*(n-1))(
            forall(j in 1..n)(
               if Cal[i,j] > 0 then
@@ -78,17 +77,16 @@ constraint forall(i in 1..2*(n-1))(
                 else Permanencia[i,j] = Permanencia[i-1,j] + 1
               endif
               else Permanencia[i,j] = 0
-                
               endif
            )  
 );
 
-%Debe haber un mínimo de giras consecutivas
+% Mínimo de giras consecutivas
 constraint forall(j in 1..n)(
            forall(i in 2..2*(n-1))(
               if i == 2*(n-1) then 
                   if Cal[i,j] < 0 then 
-                   Gira[i,j]>=Min
+                     Gira[i,j]>=Min
                   endif
              else
                 if (Cal[i,j] > 0)then 
@@ -100,12 +98,12 @@ constraint forall(j in 1..n)(
            )  
 );
 
-%Debe haber un mínimo de permanencias consecutivas
+% Mínimo de permanencias consecutivas
 constraint forall(j in 1..n)(
            forall(i in 2..2*(n-1))(
               if i == 2*(n-1) then 
                   if Cal[i,j] > 0 then 
-                   Permanencia[i,j]>=Min
+                     Permanencia[i,j]>=Min
                   endif
              else
                 if (Cal[i,j] < 0)then 
@@ -117,10 +115,9 @@ constraint forall(j in 1..n)(
            )  
 );
 
-
 % ------- Función Objetivo -------
-var int: funcion_objetivo = sum(j in 1..n)(
-    sum(i in 1..2*(n-1))(
+var int: funcion_objetivo = sum(i in 1..2*(n-1))(
+    sum(j in 1..n)(
         if i=1 then 
             if Cal[i, j] > 0 then 0 else  Distancia[j, abs(Cal[i, j])] endif
         else
@@ -130,9 +127,18 @@ var int: funcion_objetivo = sum(j in 1..n)(
                   0
               endif
             else
-                if i = 2*(n-1) then Distancia[abs(Cal[i-1,j]),abs(Cal[i,j])] + Distancia[abs(Cal[i,j]),j]
+                if i = 2*(n-1) then 
+                  if Cal[i-1,j] > 0 then
+                     Distancia[abs(Cal[i,j]),j] + Distancia[abs(Cal[i,j]),j]
+                  else
+                     Distancia[abs(Cal[i-1,j]),abs(Cal[i,j])] + Distancia[abs(Cal[i,j]),j]
+                  endif
                 else 
-                    Distancia[abs(Cal[i-1,j]),abs(Cal[i,j])]
+                    if Cal[i-1, j] <0 then
+                      Distancia[abs(Cal[i-1,j]),abs(Cal[i,j])]
+                    else
+                      Distancia[abs(Cal[i,j]),j]
+                    endif
                 endif
             endif        
         endif
