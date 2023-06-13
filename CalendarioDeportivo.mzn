@@ -175,8 +175,8 @@ var int: funcion_objetivo = sum(i in 1..2*(n-1))(
 
 % ------- Solución -------
 solve minimize funcion_objetivo;
-
 output ["Gira: \(Gira)\n",
-        "Permanencia: \(Permanencia)\n",
-        "Cal: \(Cal)\n",
-        "Función Objetivo: \(funcion_objetivo)\n"];
+        "Permanencia: \(Permanencia)\n"];
+        
+output ["Costo: \(funcion_objetivo)\n"] ++
+       [show([show(Cal[i, j]) | j in 1..n]) ++ "\n" | i in 1..2*(n-1)];
