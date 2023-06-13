@@ -5,9 +5,16 @@
 % Mayra Sánchez     - 2040506
 
 % -------------- Calendario deportivo --------------
+n=4;
+Min=1;
+Max=3;
+Distancia=[|0, 745, 665, 929
+|745, 0, 80, 337
+|665, 80, 0, 380
+|929, 337, 380, 0|];
 
 % Implementación del modelo genérico          
-% Parámetros
+% Parámetrosccc
 int: n; % Num equipos total
 int: Min; % Mínimo de giras o permanecias
 int: Max; % Máximo de giras o permanecias
@@ -17,8 +24,8 @@ array[1..n, 1..n] of int: Distancia; % Matriz de distancias n * n
 % ------- Variables -------
 % i = 2(n-1) y j = equipos 
 array[1..2*(n-1),1..n] of var int: Cal; % Cal i,j
-array[1..2*(n-1),1..n] of var 0..Max: Gira; % Gira
-array[1..2*(n-1),1..n] of var 0..Max: Permanencia; % Permanencia
+array[1..2*(n-1),1..n] of var int: Gira; % Gira
+array[1..2*(n-1),1..n] of var int: Permanencia; % Permanencia
 
 % ------- Restricciones -------
 constraint n mod 2 == 0; % n tiene que ser par
@@ -55,7 +62,17 @@ constraint forall(i,k in 1..2*(n-1), j in 1..n where i != k)(
   Cal[i,j] != Cal[k,j]
 );
 
-% Máximo de giras consecutivas
+%Todo numero de gira debe de estar entre 0 y max
+constraint forall(i in 1..2*(n-1), j in 1..n)(
+  Gira[i,j] <= Max /\ Gira[i,j] >= 0 
+);
+
+%Todo numero de permanencia debe de estar entre 0 y max
+constraint forall(i in 1..2*(n-1), j in 1..n)(
+  Permanencia[i,j] <= Max /\ Permanencia[i,j] >= 0 
+);
+
+%Restricción para llenar las matriz de gira
 constraint forall(i in 1..2*(n-1))(
            forall(j in 1..n)(
               if Cal[i,j] < 0 then
@@ -68,13 +85,13 @@ constraint forall(i in 1..2*(n-1))(
            )  
 );
 
-% Máximo de permanencias consecutivas
+%Restricción para llenar las matriz de permanencia
 constraint forall(i in 1..2*(n-1))(
            forall(j in 1..n)(
               if Cal[i,j] > 0 then
                 if i==1 then
-                  Permanencia[i,j] = 1
-                else Permanencia[i,j] = Permanencia[i-1,j] + 1
+                Permanencia[i,j] = 1
+              else Permanencia[i,j] = Permanencia[i-1,j] + 1
               endif
               else Permanencia[i,j] = 0
               endif
@@ -83,11 +100,17 @@ constraint forall(i in 1..2*(n-1))(
 
 % Mínimo de giras consecutivas
 constraint forall(j in 1..n)(
-           forall(i in 2..2*(n-1))(
+           forall(i in 1..2*(n-1))(
               if i == 2*(n-1) then 
                   if Cal[i,j] < 0 then 
-                     Gira[i,j]>=Min
+                   Gira[i,j]>=Min
                   endif
+              elseif i == 1  then
+                 if Cal[i,j]<0 then 
+                    if Cal[i+1,j] > 0  then
+                      Gira[i,j] >= Min
+                    endif
+                 endif
              else
                 if (Cal[i,j] > 0)then 
                   if(Cal[i-1,j] < 0)
@@ -100,13 +123,19 @@ constraint forall(j in 1..n)(
 
 % Mínimo de permanencias consecutivas
 constraint forall(j in 1..n)(
-           forall(i in 2..2*(n-1))(
+           forall(i in 1..2*(n-1))(
               if i == 2*(n-1) then 
                   if Cal[i,j] > 0 then 
                      Permanencia[i,j]>=Min
                   endif
+                elseif i == 1 then
+                    if Cal[i,j]>0  then 
+                      if Cal[i+1,j] < 0  then
+                      Gira[i,j] >= Min
+                    endif
+                  endif
              else
-                if (Cal[i,j] < 0)then 
+                if (Cal[i,j] < 0)then
                   if(Cal[i-1,j] > 0)
                     then Permanencia[i-1,j]>=Min              
                   endif               
@@ -114,7 +143,6 @@ constraint forall(j in 1..n)(
               endif
            )  
 );
-
 % ------- Función Objetivo -------
 var int: funcion_objetivo = sum(i in 1..2*(n-1))(
     sum(j in 1..n)(
