@@ -2,11 +2,11 @@ import tkinter as tk
 from tkinter import Tk, Label, Button
 from tkinter import ttk
 from PIL import ImageTk, Image
-import minizinc
-from minizinc import Instance, Solver, Model
-from tkinter import filedialog
-import os
 import subprocess
+from minizinc import Instance, Model, Solver
+import datetime
+import os
+from tkinter import filedialog
 
 class aplicacion(tk.Tk):
     def __init__(self):
@@ -17,7 +17,7 @@ class aplicacion(tk.Tk):
         self.resizable(False, False)
 
         # Cargar la imagen
-        imagen = Image.open("fondo.jpg")
+        imagen = Image.open("CalDepGUIFuentes/fondo.jpg")
         imagen = imagen.resize((1366, 768), Image.ANTIALIAS)  # Ajustar tamaño de la imagen
 
         # Crear un objeto PhotoImage
@@ -112,10 +112,16 @@ class aplicacion(tk.Tk):
         self.resultado_label.place(x=850, y=180)
 
         
-        self.salida_resultado= tk.Text(self, width=20, height=15)
+        self.salida_resultado= tk.Text(self, width=40, height=30)
         self.salida_resultado.configure(font=("sans-serif", 12), borderwidth=0, relief=tk.RAISED, highlightthickness=1)
         self.salida_resultado.pack()
         self.salida_resultado.place(x=950, y=180)
+
+        self.reinciar = Button(
+            self, text="Reiniciar", fg="white", command=self.reiniciar)
+        self.reinciar.pack()
+        self.reinciar.config(bg="blue",width=10, height=2)
+        self.reinciar.place(x=100, y=685) 
     # Función que sirve para leer el archivo txt y ponerlo en la interfaz
     def cargarDatosInterfaz(self):
         file = tk.filedialog.askopenfile(filetypes=[("Text Files", "*.txt")])
@@ -141,46 +147,56 @@ class aplicacion(tk.Tk):
         matrix_data = matrix_data[:-2]  # Remove the trailing comma and newline character
 
         # Write the data to a file
-        with open("DatosCalendarioDeportivo.dzn", "w") as file:
+        with open("CalDepGUIFuentes/DatosCalendarioDeportivo.dzn", "w") as file:
             file.write(f"n = {n_value};\n")
             file.write(f"Min = {min_value};\n")
             file.write(f"Max = {max_value};\n")
             file.write(f"Distancia = [|{matrix_data}0|];")
     
     def correr(self):
-        # Ruta al archivo del modelo
-        model_file = "CalendarioDeportivo.mzn"
 
-        # Ruta al archivo de datos
-        data_file = "DatosCalendarioDeportivo.dzn"
+        self.salida_resultado.config(state="normal")
+        self.salida_resultado.delete("1.0", tk.END)
 
-        # Comando para ejecutar MiniZinc desde la línea de comandos
-        command = ['C:/Program Files/MiniZinc', '--solver', 'gecode', model_file, data_file]
-        result = subprocess.run(command, capture_output=True, text=True)
-        print(result)
-        # try:
-        #     # Ejecutar el comando y capturar la salida
-        #     
+        try:
+            model = Model("CalDepGUIFuentes/CalendarioDeportivo.mzn")
+            model.add_file("CalDepGUIFuentes/DatosCalendarioDeportivo.dzn")
+            solver = Solver.lookup("chuffed")
+            instance = Instance(solver, model)
 
-        #     # Obtener la salida estándar y la salida de error
-        #     output_text = result.stdout
-        #     error_text = result.stderr
+            start = datetime.datetime.now()
+            result = instance.solve(timeout=datetime.timedelta(seconds=120))
+            end = datetime.datetime.now()
+            if result:
+                costo = result.objective
+                cal_matrix = result["Cal"]
+                self.salida_resultado.insert(tk.END, f"Solución encontrada:\n\n")
+                self.salida_resultado.insert(tk.END, f"Costo total = {costo}\n")
 
-        #     if result.returncode == 0:
-        #         # Obtener los resultados del texto de salida
-        #         result_text = "No se encontró una solución satisfactoria."
-        #         if "----------" in output_text:
-        #             result_text = output_text.split("----------")[-1].strip()
+                self.salida_resultado.insert(tk.END, f"Cal = \n")
+                for row in cal_matrix:
+                    self.salida_resultado.insert(tk.END, f"      {row}\n")
+                self.salida_resultado.insert(tk.END, f"\n")
 
-        #         # Actualizar el texto del resultado_label
-        #         self.resultado_label.config(text=result_text)
-        #     else:
-        #         # Actualizar el texto del resultado_label con el mensaje de error
-        #         self.resultado_label.config(text="Error al ejecutar MiniZinc: " + error_text)
-        # except subprocess.CalledProcessError as e:
-        #     # Si hay un error al ejecutar el comando
-        #     self.resultado_label.config(text="Error al ejecutar MiniZinc: " + str(e))
+            elif end - start < datetime.timedelta(seconds=120):
+                self.salida_resultado.insert(tk.END, f"Solución NO encontrada:\n\n")
+                self.salida_resultado.insert(tk.END, f"EL PROBLEMA ES INSATISFACIBLE\n\n")
+            else:
+                self.salida_resultado.insert(tk.END, f"Solución NO encontrada:\n\n")
+                self.salida_resultado.insert(tk.END, f"No se ha podido encontrar una solución en el tiempo dado\n\n")
 
+            self.salida_resultado.insert(tk.END, f"Tiempo de ejecución: {end-start}\n\n")
+            self.salida_resultado.config(state="disabled")
+        except subprocess.CalledProcessError as e:
+            # Manejar el caso de error en la ejecución del modelo
+            error_message = e.output.decode()
+            self.salida_resultado.delete("1.0", tk.END)
+            self.salida_resultado.insert(tk.END, f"Error en la ejecución del modelo:\n{error_message}")
+
+    def reiniciar(self):
+       self.destroy()
+       ventana_nueva = aplicacion()
+       ventana_nueva.mainloop()
 
 if __name__ == "__main__":
     app = aplicacion()
